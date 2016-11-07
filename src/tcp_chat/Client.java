@@ -6,6 +6,8 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -16,6 +18,8 @@ public class Client
     private Socket socket;
     private final Scanner scanner;
     private String myUsername;
+    
+    private BufferedReader input;
     
     public Client(String address, int port)
     {
@@ -28,7 +32,9 @@ public class Client
         try
         {
             this.socket = new Socket (address, port);
-            initializeConnection();
+            System.out.println("Created socket to server");
+            input = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
+            //initializeConnection();
             // connected to address and port and server has username
         }
         catch (IOException E)
@@ -43,12 +49,31 @@ public class Client
     private void initializeConnection() throws IOException
     {
         PrintWriter output = new PrintWriter(this.socket.getOutputStream(),true);
-        BufferedReader input = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
+        BufferedReader in = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
         
         while(true)
         {
             System.out.println("Please enter a username on the server");
             //String name = scanner.
         }
+    }
+    
+    public String readSocket()
+    {
+        try
+        {
+            return input.readLine();
+        } 
+        catch (IOException ex)
+        {
+            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+            return "CLIENT COULDN'T READ FROM SOCKET";
+        }
+    }
+    
+    public static void main(String[] args)
+    {
+        Client c = new Client("127.0.0.1", 1884);
+        System.out.println(c.readSocket());
     }
 }
