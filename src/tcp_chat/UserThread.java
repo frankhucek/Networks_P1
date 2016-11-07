@@ -7,16 +7,24 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author frank
  */
-public class ServerThread extends Thread
+public class UserThread extends Thread
 {
-    private final Socket connSocket;
+    private final Socket myListeningSocket;
+    private Socket talkingToSocket;
     
-    private ConcurrentHashMap<String, Socket> userSockets;
+    public String myUsername;
+    public boolean isChatting;
     
-    public ServerThread(Socket connSocket, ConcurrentHashMap<String, Socket> userSockets)
+    private ConcurrentHashMap<String, UserThread> userList;
+    
+    public UserThread(Socket connSocket, ConcurrentHashMap<String, UserThread> userSockets)
     {
-        this.connSocket = connSocket;
-        this.userSockets = userSockets;
+        this.myListeningSocket = connSocket;  
+        this.talkingToSocket = null;
+        
+        this.userList = userSockets;
+        this.myUsername = null;
+        this.isChatting = false;
     }
     
     /*
@@ -31,6 +39,11 @@ public class ServerThread extends Thread
     
     @Override
     public void run()
+    {
+        initializeUsername();
+    }
+    
+    private static void initializeUsername()
     {
         
     }

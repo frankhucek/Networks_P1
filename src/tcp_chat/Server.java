@@ -14,13 +14,13 @@ public class Server
     /*
         <User, ConnectionSocket>
     */
-    private ConcurrentHashMap<String, Socket> userSockets;
+    private ConcurrentHashMap<String, UserThread> userList;
     private ServerSocket welcomeSocket;
     private final int PORT_NUMBER;
     
     public Server(int PORT)
     {
-        this.userSockets = new ConcurrentHashMap<>();
+        this.userList = new ConcurrentHashMap<>();
         PORT_NUMBER = PORT;
     }
     
@@ -33,9 +33,9 @@ public class Server
             while(true)
             {
                 Socket connSocket = welcomeSocket.accept();
-                // pass userSockets by reference for all threads to use
-                new ServerThread(connSocket, this.userSockets).start();
-                // could pass "this" to ServerThread and make userSockets visible
+                // pass userList by reference for all threads to use
+                new UserThread(connSocket, this.userList).start();
+                // could pass "this" to UserThread and make userList visible
                 // should work to pass hashmap bc same instance
             }
         } 

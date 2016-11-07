@@ -48,7 +48,7 @@ public class Client
         while(true)
         {
             System.out.println("Please enter a username on the server");
-            String name = scanner.
+            //String name = scanner.
         }
     }
 }
