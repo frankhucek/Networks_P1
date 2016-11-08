@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -28,8 +29,8 @@ public class UserThread extends Thread
     */
     private final BufferedReader myData_IN;
     private       BufferedReader theirData_IN;
-    private final DataOutputStream myData_OUT;
-    private       DataOutputStream theirData_OUT; 
+    private final PrintWriter myData_OUT;
+    private       PrintWriter theirData_OUT; 
     
     public UserThread(Socket connSocket, 
             ConcurrentHashMap<String, UserThread> userSockets) throws IOException
@@ -45,7 +46,7 @@ public class UserThread extends Thread
                          new InputStreamReader (
                                  myListeningSocket.getInputStream()));
         
-        this.myData_OUT = new DataOutputStream(myListeningSocket.getOutputStream());
+        this.myData_OUT = new PrintWriter(new DataOutputStream(myListeningSocket.getOutputStream()));
     }
 
     
@@ -65,6 +66,7 @@ public class UserThread extends Thread
         try
         {
             initializeUsername();
+            myListeningSocket.close();
         } catch (IOException ex)
         {
             System.out.println("ERROR sending data");
@@ -73,9 +75,25 @@ public class UserThread extends Thread
     
     private void initializeUsername() throws IOException
     {
-        myData_OUT.write("CONNECTED!".getBytes());
+        // FIRST MESSAGE -> send connection confirmation to client
+        myData_OUT.print("CONNECTED!");
+        myData_OUT.flush();
         System.out.println("SERVER: connected to client");
         
-        myListeningSocket.close();
+        while (this.myUsername == null)
+        {
+            myData_OUT.println("Please enter a username");
+            myData_OUT.flush();
+            String name = myData_IN.readLine();            /// REFACTOR SO THIS ISNT IN INFINITE LOOP
+            if(name != null && !userList.containsKey(name))
+            {
+                myUsername = name;
+                userList.put(myUsername, this);
+                myData_OUT.println("set");
+            }
+        }
+        
+        System.out.println("SERVER: Username set to " + myUsername);
+        
     }
 }

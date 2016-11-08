@@ -1,13 +1,12 @@
 package tcp_chat;
 
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -19,12 +18,14 @@ public class Client
     private final Scanner scanner;
     private String myUsername;
     
-    private BufferedReader input;
+    private BufferedReader myData_IN;
+    private PrintWriter myData_OUT;
     
     public Client(String address, int port)
     {
-        createSocket(address, port);
         this.scanner = new Scanner(System.in);
+        this.myUsername = null;
+        createSocket(address, port);
     }
     
     private void createSocket(String address, int port)
@@ -33,40 +34,43 @@ public class Client
         {
             this.socket = new Socket (address, port);
             System.out.println("Created socket to server");
-            input = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
-            //initializeConnection();
+            myData_IN = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
+            myData_OUT = new PrintWriter(new DataOutputStream(this.socket.getOutputStream()));
+            initializeUsername();
             // connected to address and port and server has username
         }
         catch (IOException E)
         {
             System.out.println("Failed to create socket stuff.");
+            System.exit(1);
         }
     }
     
     /**
      * Send username to server
      */
-    private void initializeConnection() throws IOException
-    {
-        PrintWriter output = new PrintWriter(this.socket.getOutputStream(),true);
-        BufferedReader in = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
-        
-        while(true)
+    private void initializeUsername() throws IOException
+    {      
+        System.out.println(myData_IN.readLine());
+        String fromServer = "";
+        while(!fromServer.equals("set"))
         {
-            System.out.println("Please enter a username on the server");
-            //String name = scanner.
+            String name = scanner.nextLine();
+            System.out.println(name + "repeat");
+            myData_OUT.println(name);
+            System.out.println((fromServer = myData_IN.readLine()));
         }
+        System.out.println("Username set to");
     }
     
     public String readSocket()
     {
         try
         {
-            return input.readLine();
+            return myData_IN.readLine();
         } 
         catch (IOException ex)
         {
-            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
             return "CLIENT COULDN'T READ FROM SOCKET";
         }
     }
