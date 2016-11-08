@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -29,8 +28,8 @@ public class UserThread extends Thread
     */
     private final BufferedReader myData_IN;
     private       BufferedReader theirData_IN;
-    private final PrintWriter myData_OUT;
-    private       PrintWriter theirData_OUT; 
+    private final DataOutputStream myData_OUT;
+    private       DataOutputStream theirData_OUT; 
     
     public UserThread(Socket connSocket, 
             ConcurrentHashMap<String, UserThread> userSockets) throws IOException
@@ -39,16 +38,59 @@ public class UserThread extends Thread
         this.talkingToSocket = null;
         
         this.userList = userSockets;
-        this.myUsername = null;
+        this.myUsername = "";
         this.isChatting = false;
         
         this.myData_IN = new BufferedReader (
                          new InputStreamReader (
                                  myListeningSocket.getInputStream()));
         
-        this.myData_OUT = new PrintWriter(new DataOutputStream(myListeningSocket.getOutputStream()));
+        this.myData_OUT = new DataOutputStream(myListeningSocket.getOutputStream());
     }
 
+    @Override
+    public void run()
+    {
+        try
+        {
+            initializeUsername();
+            
+            String input;
+            
+            while(true)
+            {
+                input = myData_IN.readLine(); // server awaits input
+                
+                // check for control message
+                
+                if(!isChatting) // Listening
+                {
+                    // send input to Listening method
+                }
+                else // isChatting
+                {
+                    // send input to USER 
+                    // REMEMBER WHEN CONNECTING TO USER, PULL USER TO THIS THREAD, DO NOT PUSH (logic stuff)
+                        // - check if they're chatting before pulling them here
+                        // when reading from other user, will have to check them for control messages
+                }
+                
+                /*
+                I.READ LINE FIRST???
+                
+                II. either "Listening" or talking to another user based on flag isChatting - determines where data written to
+                III. both options process control messages the same
+                
+                ^^^ Implemented above
+                */
+                break;
+            }
+            myListeningSocket.close();
+        } catch (IOException ex)
+        {
+            System.out.println("ERROR sending data");
+        }
+    }
     
     /*
     read initial input to get user/state
@@ -60,40 +102,46 @@ public class UserThread extends Thread
                     
     */
     
-    @Override
-    public void run()
-    {
-        try
-        {
-            initializeUsername();
-            myListeningSocket.close();
-        } catch (IOException ex)
-        {
-            System.out.println("ERROR sending data");
-        }
-    }
-    
     private void initializeUsername() throws IOException
     {
-        // FIRST MESSAGE -> send connection confirmation to client
-        myData_OUT.print("CONNECTED!");
-        myData_OUT.flush();
         System.out.println("SERVER: connected to client");
-        
-        while (this.myUsername == null)
+        boolean set;
+        do
         {
-            myData_OUT.println("Please enter a username");
-            myData_OUT.flush();
-            String name = myData_IN.readLine();            /// REFACTOR SO THIS ISNT IN INFINITE LOOP
-            if(name != null && !userList.containsKey(name))
-            {
-                myUsername = name;
-                userList.put(myUsername, this);
-                myData_OUT.println("set");
-            }
-        }
+            String input = myData_IN.readLine(); // FIRST MESSAGE RECEIVED
+            
+            set = setUsername(input);
+            
+            if(!set)
+                myData_OUT.write(UserThread.formatOutput("Invalid Username. Please enter a new one."));
+            else
+                myData_OUT.write(UserThread.formatOutput("set"));
+        } while (!set);
         
-        System.out.println("SERVER: Username set to " + myUsername);
-        
+        System.out.println("SERVER: Client username set to " + myUsername);
+    }
+    
+    private boolean setUsername(String inputName)
+    {
+        if(userList.containsKey(inputName))
+            return false;
+        else
+        {    
+            userList.put(inputName, this);
+            myUsername = inputName;
+            return true;
+        } 
+    }
+    
+    
+    
+    /**
+     * Format output to all sockets on a DataOutputStream
+     * @param outputText
+     * @return 
+     */
+    public static byte[] formatOutput(String outputText)
+    {
+        return (outputText + "\n").getBytes();
     }
 }

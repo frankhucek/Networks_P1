@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
 
@@ -15,27 +14,32 @@ import java.util.Scanner;
 public class Client
 {
     private Socket socket;
+    
     private final Scanner scanner;
     private String myUsername;
     
     private BufferedReader myData_IN;
-    private PrintWriter myData_OUT;
+    private DataOutputStream myData_OUT;
     
     public Client(String address, int port)
     {
         this.scanner = new Scanner(System.in);
         this.myUsername = null;
-        createSocket(address, port);
+        
+        initializeClient(address, port);
     }
     
-    private void createSocket(String address, int port)
+    private void initializeClient(String address, int port)
     {
         try
         {
             this.socket = new Socket (address, port);
-            System.out.println("Created socket to server");
+            
+            System.out.println("Connected to " + address + " on port " + port);
+            
             myData_IN = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
-            myData_OUT = new PrintWriter(new DataOutputStream(this.socket.getOutputStream()));
+            myData_OUT = new DataOutputStream(this.socket.getOutputStream());
+            
             initializeUsername();
             // connected to address and port and server has username
         }
@@ -51,33 +55,30 @@ public class Client
      */
     private void initializeUsername() throws IOException
     {      
-        System.out.println(myData_IN.readLine());
-        String fromServer = "";
-        while(!fromServer.equals("set"))
+        boolean set = false;
+        String response;
+        do
         {
-            String name = scanner.nextLine();
-            System.out.println(name + "repeat");
-            myData_OUT.println(name);
-            System.out.println((fromServer = myData_IN.readLine()));
-        }
-        System.out.println("Username set to");
-    }
-    
-    public String readSocket()
-    {
-        try
-        {
-            return myData_IN.readLine();
-        } 
-        catch (IOException ex)
-        {
-            return "CLIENT COULDN'T READ FROM SOCKET";
-        }
+            System.out.print("Username: ");
+            myUsername = scanner.nextLine();
+                
+                // FIRST MESSAGE IN CONNECTION
+            myData_OUT.write(Client.formatOutput(myUsername)); // 
+            
+            response = myData_IN.readLine();
+            System.out.println(response);
+
+        }while(!"set".equals(response));
+        System.out.println("Username set on server to " + myUsername);
     }
     
     public static void main(String[] args)
     {
         Client c = new Client("127.0.0.1", 1884);
-        System.out.println(c.readSocket());
+    }
+    
+    public static byte[] formatOutput(String outputText)
+    {
+        return (outputText + "\n").getBytes();
     }
 }
