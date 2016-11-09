@@ -41,6 +41,10 @@ public class Client
             myData_OUT = new DataOutputStream(this.socket.getOutputStream());
             
             initializeUsername();
+            myData_OUT.write(formatOutput("-c mike"));
+            System.out.println(myData_IN.readLine());
+            myData_OUT.write(formatOutput("-q"));
+            //while(true){}
             // connected to address and port and server has username
         }
         catch (IOException E)

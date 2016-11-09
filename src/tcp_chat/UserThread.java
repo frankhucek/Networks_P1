@@ -11,30 +11,25 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class UserThread extends Thread
 {
-    private final Socket myListeningSocket;
-    private Socket talkingToSocket;
-    
-    private ConcurrentHashMap<String, UserThread> userList; 
+    private ConcurrentHashMap<User, UserThread> userList; 
     
     private User USER1, USER2;
     
     public UserThread(Socket connSocket, 
-            ConcurrentHashMap<String, UserThread> userSockets) throws IOException
+            ConcurrentHashMap<User, UserThread> userSockets) throws IOException
     {
-        this.myListeningSocket = connSocket;  
-        this.talkingToSocket = null;
-        
         this.userList = userSockets;
         
         this.USER1 = new User(connSocket);
         this.USER2 = null; // until connected to second user
     }
-    public UserThread(Socket connSocket, 
-            ConcurrentHashMap<String, UserThread> userSockets, 
-            User existingUser) throws IOException
+    
+    public UserThread(User existingUser,
+            ConcurrentHashMap<User, UserThread> userSockets) throws IOException
     {
-        this(connSocket,userSockets);
+        this.userList = userSockets;
         this.USER1 = existingUser;
+        this.USER2 = null;
     }
     
 
@@ -49,8 +44,8 @@ public class UserThread extends Thread
             
             while(true)
             {
-                handleInput(USER1);
-                handleInput(USER2);
+                handleInput(USER1); // alternate whos turn it is to for input
+                handleInput(USER2); // strict 1 for 1 message sending
             }
         } catch (IOException ex)
         {
@@ -82,11 +77,12 @@ public class UserThread extends Thread
     
     private boolean setUsername(String inputName)
     {
-        if(userList.containsKey(inputName))
+        User user = searchUsersFromName(inputName);
+        if(user != null)
             return false;
         else
         {    
-            userList.put(inputName, this);
+            userList.put(USER1, this);
             USER1.setUsername(inputName);
             return true;
         } 
@@ -106,9 +102,19 @@ public class UserThread extends Thread
             }
             else // relay messages
             {
-                
+                //handleChatMessage(user, userIN);
             }
         }
+    }
+    
+    private void handleChatMessage(User user, String messageToSend) throws IOException
+    {
+        User userToSendTo = user.equals(USER1) ? USER2 : USER1;
+        
+        if(userToSendTo != null)         
+            userToSendTo.getmyData_OUT().write(formatOutput(messageToSend));
+        else
+            user.getmyData_OUT().write(formatOutput(messageToSend));
     }
     
     /**
@@ -134,20 +140,25 @@ public class UserThread extends Thread
         if(input != null)
         {    
             String command = input.substring(0, 2);
-            String commandData = input.substring(3);
             switch (command)
             {
                 case "-c": // chat
+                    String commandData = input.substring(3);
+                    System.out.println("SERVER received command " + command + "\n" + commandData);
                     if(isChatting()) // if is in chat and want to connect with other
                     {
                         // move other user to its own thread
+                        moveCurrentChattingUser(user);
                     }
                     this.userChatSetup(user, commandData);
+                    break;
                     
+                case "-q":
+                    closeUserConnection(user);
                     break;
                     
                 default:
-                    // some default case if not an actual command
+                    // define some default case if not an actual command
                     break;
             }
                     
@@ -156,9 +167,88 @@ public class UserThread extends Thread
         handleInput(user); // can therefore call as many commands as possible
     }
     
-    private void userChatSetup(User user, String userToConnect)
+    /**
+     * If there is a user currently chatting with the current user,
+     * move him/her to their own thread to make room for requested user here
+     * @param currentUser
+     * @throws IOException 
+     */
+    private void moveCurrentChattingUser(User currentUser) throws IOException
     {
+        User userToMove;
+        if(!currentUser.equals(USER1)) // user2 sending this command
+            userToMove = USER1;
+        else
+            userToMove = USER2;
         
+        UserThread newUserThread = new UserThread(userToMove, this.userList);
+        
+        this.userList.replace(userToMove, newUserThread);
+        
+        newUserThread.start();
+        
+        currentUser.getmyData_OUT().write(formatOutput("SERVER: You've switched chats"));
+        userToMove.getmyData_OUT().write(formatOutput(
+                "SERVER: You've been disconnected from that chat by request of the other user."));
+        
+        USER1 = currentUser;
+        USER2 = null;
+    }
+    
+    
+    /**
+     * 
+     * @param user
+     * @param userToConnect 
+     */
+    private void userChatSetup(User user, String usernameToConnect) throws IOException
+    {
+        if(usernameToConnect.equalsIgnoreCase("LISTENER"))
+            return;
+        
+        User userToConnect = searchUsersFromName(usernameToConnect);
+                
+        if(userToConnect != null
+            || usernameToConnect.equals(user.getUsername()))                       
+        {
+            UserThread userToConnectThread = userList.get(userToConnect);
+            
+            if(!userToConnectThread.isChatting())
+            {
+                USER2 = userToConnect;
+                
+                userToConnectThread.stop();
+                
+                userList.replace(USER2, this);
+            }
+            else
+                user.getmyData_OUT().write(
+                        formatOutput("Failed to connect to client. " 
+                                + usernameToConnect + " is busy."));
+        }
+        else
+            user.getmyData_OUT().write(formatOutput("Offline client"));
+    }
+
+    private User searchUsersFromName(String name)
+    {
+        return userList.searchKeys(1, usr -> 
+                usr.getUsername().equals(name) ? usr : null);
+    }
+    
+    private void closeUserConnection(User user) throws IOException
+    {
+        if(isChatting())
+        {
+            User other = user.equals(USER1) ? USER2 : USER1;
+            other.getmyData_OUT().write(formatOutput(
+                    "SERVER: The person you were chatting with has disconnected."));
+            new UserThread(other, this.userList).start();
+        }
+        
+        user.getUserSocket().close();
+        userList.remove(user);
+        this.stop();
     }
     
     /**
@@ -169,7 +259,7 @@ public class UserThread extends Thread
     {
         return USER2 != null;
     }
-    
+        
     /**
      * Format output to all sockets on a DataOutputStream
      * @param outputText
@@ -180,34 +270,3 @@ public class UserThread extends Thread
         return (outputText + "\n").getBytes();
     }
 }
-
-
-/*
-
-    logic stuff.
-
-                input = USER1.myData_IN.readLine(); // server awaits input
-                
-                // check for control message
-                
-                if(!isChatting) // Listening
-                {
-                    // send input to Listening method
-                }
-                else // isChatting
-                {
-                    // send input to USER 
-                    // REMEMBER WHEN CONNECTING TO USER, PULL USER TO THIS THREAD, DO NOT PUSH (logic stuff)
-                        // - check if they're chatting before pulling them here
-                        // when reading from other user, will have to check them for control messages
-                }
-                
-                /*
-                I.READ LINE FIRST???
-                
-                II. either "Listening" or talking to another user based on flag isChatting - determines where data written to
-                III. both options process control messages the same
-                
-                ^^^ Implemented above
-                /
-                break;*/

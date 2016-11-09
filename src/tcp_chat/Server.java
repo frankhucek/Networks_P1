@@ -14,7 +14,7 @@ public class Server
     /*
         <User, ConnectionSocket>
     */
-    private ConcurrentHashMap<String, UserThread> userList;
+    private ConcurrentHashMap<User, UserThread> userList;
     private ServerSocket welcomeSocket;
     private final int PORT_NUMBER;
     
