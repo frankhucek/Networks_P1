@@ -32,7 +32,12 @@ public class UserThread extends Thread
         this.USER2 = null;
     }
     
-
+    /**
+     * Initialize the username
+     * Loop:
+     * handle input from user1
+     * handle input from user2
+     */
     @Override
     public void run()
     {
@@ -53,6 +58,11 @@ public class UserThread extends Thread
         }
     }
     
+    /**
+     * The process to go through in order to get username 
+     * verified on the server.
+     * @throws IOException 
+     */
     private void initializeUsername() throws IOException
     {
         if(USER1.getUsername() == null)
@@ -75,6 +85,11 @@ public class UserThread extends Thread
         }
     }
     
+    /**
+     * Sets this username if the user doesn't already exist
+     * @param inputName
+     * @return 
+     */
     private boolean setUsername(String inputName)
     {
         User user = searchUsersFromName(inputName);
@@ -89,7 +104,12 @@ public class UserThread extends Thread
     }
     ////////////////// ABOVE IS SERVER - CLIENT INITIALIZATION /////////////////
      
-    
+    /**
+     * Method which will handle any input to the server
+     * and respond in an appropriate way.
+     * @param user
+     * @throws IOException 
+     */
     private void handleInput(User user) throws IOException
     {
         if(user != null)
@@ -108,6 +128,13 @@ public class UserThread extends Thread
         }
     }
     
+    /**
+     * The actual functional chat.
+     * messageToSend to send to other user
+     * @param user sending user
+     * @param messageToSend message to send
+     * @throws IOException 
+     */
     private void handleChatMessage(User user, String messageToSend) throws IOException
     {
         User userToSendTo = user.equals(USER1) ? USER2 : USER1;
@@ -132,7 +159,7 @@ public class UserThread extends Thread
     }
     
     /**
-     * 
+     * The method which handles any server commands
      * @param input 
      */
     private void handleServerCommand(User user, String input) throws IOException
@@ -199,9 +226,9 @@ public class UserThread extends Thread
     
     
     /**
-     * 
-     * @param user
-     * @param userToConnect 
+     * Set up a chat with a user
+     * @param user connecting user
+     * @param userToConnect username to connect to
      */
     private void userChatSetup(User user, String usernameToConnect) throws IOException
     {
@@ -233,12 +260,22 @@ public class UserThread extends Thread
             user.getmyData_OUT().write(formatOutput("Offline client"));
     }
 
+    /**
+     * Lambda to help filter userList
+     * @param name
+     * @return 
+     */
     private User searchUsersFromName(String name)
     {
         return userList.searchKeys(1, usr -> 
                 usr.getUsername().equals(name) ? usr : null);
     }
     
+    /**
+     * Close the connection to the specified connection
+     * @param user the calling user to disconnect
+     * @throws IOException 
+     */
     private void closeUserConnection(User user) throws IOException
     {
         if(isChatting())

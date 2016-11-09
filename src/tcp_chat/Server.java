@@ -30,13 +30,15 @@ public class Server
         {
             this.welcomeSocket = new ServerSocket(PORT_NUMBER);
             
+            System.out.println("Server now accepting connections...");
+            
             while(true)
             {
+                
                 Socket connSocket = welcomeSocket.accept();
                 // pass userList by reference for all threads to use
                 new UserThread(connSocket, this.userList).start();
-                // could pass "this" to UserThread and make userList visible
-                // should work to pass hashmap bc same instance
+                System.out.println("Accepted new connection");
             }
         } 
         catch (IOException ex)
@@ -47,7 +49,9 @@ public class Server
 
     public static void main(String[] args)
     {
-        Server server = new Server(1884);
-        server.runChatServer();
+        if(args.length != 1)
+            new Server(1884).runChatServer();
+        else
+            new Server(Integer.parseInt(args[0])).runChatServer();
     }
 }

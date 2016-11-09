@@ -139,6 +139,12 @@ public class Client
     
     public static void main(String[] args)
     {
-        Client c = new Client("127.0.0.1", 1884);
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Please enter a host to connect with: ");
+        String addr = scanner.nextLine();
+        System.out.print("Please enter a port number for that host: ");
+        int port = scanner.nextInt();
+        
+        Client c = new Client(addr, port);
     }
 }

@@ -7,7 +7,8 @@ import java.io.InputStreamReader;
 import java.net.Socket;
 
 /**
- *
+ * Class used to help with encapsulation of 
+ * username, socket, reader, and writer
  * @author frank
  */
 public class User
