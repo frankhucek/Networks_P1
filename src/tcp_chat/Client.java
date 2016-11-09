@@ -13,6 +13,9 @@ import java.util.Scanner;
  */
 public class Client
 {
+    private static final String MESSAGE_DELINEATER1 = "Enter";
+    private static final String MESSAGE_DELINEATER2 = "Escape";
+    
     private Socket socket;
     
     private final Scanner scanner;
@@ -41,11 +44,15 @@ public class Client
             myData_OUT = new DataOutputStream(this.socket.getOutputStream());
             
             initializeUsername();
-            myData_OUT.write(formatOutput("-c mike"));
-            System.out.println(myData_IN.readLine());
-            myData_OUT.write(formatOutput("-q"));
-            //while(true){}
-            // connected to address and port and server has username
+            
+            boolean keepRunning = true;
+            String dataIn;
+            while(keepRunning)
+            {
+                System.out.print("$ ");
+                dataIn = scanner.nextLine();
+                keepRunning = handleInput(dataIn);
+            }
         }
         catch (IOException E)
         {
@@ -76,13 +83,62 @@ public class Client
         System.out.println("Username set on server to " + myUsername);
     }
     
-    public static void main(String[] args)
+    private boolean handleInput(String data) throws IOException
     {
-        Client c = new Client("127.0.0.1", 1884);
+        boolean keepRunning = true;
+        if(data.contains(MESSAGE_DELINEATER1))
+            data = data.replace(MESSAGE_DELINEATER1, "");
+        else if(data.contains(MESSAGE_DELINEATER2))
+            data = data.replace(MESSAGE_DELINEATER2, "");
+            
+        
+        if(data.contains("-c"))
+        {
+            myData_OUT.write(formatOutput(data));
+            String serverResponse = myData_IN.readLine();
+            System.out.println(serverResponse);
+            if(serverResponse.contains("SWITCHED"))
+            {
+                myData_OUT.write(formatOutput("Connected to " + myUsername));
+                System.out.println(myData_IN.readLine());
+            }
+        }
+        else if(data.contains("-q"))
+        {
+            myData_OUT.write(formatOutput(data));
+            this.socket.close();
+            
+            keepRunning = false;
+        }
+        else
+        {
+            myData_OUT.write(formatOutput(data));
+            System.out.println(myData_IN.readLine());
+        }
+        
+        return keepRunning;
     }
     
+    /**
+     * SERVER COMMANDS DELINEATED BY '-'
+     * ALL server commands of the form "-x input"
+     * where x is the option
+     * To chat with another user: -c UserToChatWith
+     * @param input
+     * @return 
+     */
+    private static boolean isServerCommand(String input)
+    {
+        return (input != null && input.startsWith("-"));
+    }
+        
     public static byte[] formatOutput(String outputText)
     {
         return (outputText + "\n").getBytes();
+    }
+    
+    public static void main(String[] args)
+    {
+        Client c = new Client("127.0.0.1", 1884);
     }
 }

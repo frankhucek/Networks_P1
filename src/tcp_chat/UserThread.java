@@ -94,6 +94,7 @@ public class UserThread extends Thread
     {
         if(user != null)
         {
+            System.out.println("Handling input from " + user.getUsername());
             String userIN = user.getmyData_IN().readLine();
             
             if(isServerCommand(userIN))
@@ -102,7 +103,7 @@ public class UserThread extends Thread
             }
             else // relay messages
             {
-                //handleChatMessage(user, userIN);
+                handleChatMessage(user, userIN);
             }
         }
     }
@@ -139,12 +140,13 @@ public class UserThread extends Thread
         
         if(input != null)
         {    
+            System.out.println("SERVER received command " + input);
             String command = input.substring(0, 2);
             switch (command)
             {
                 case "-c": // chat
                     String commandData = input.substring(3);
-                    System.out.println("SERVER received command " + command + "\n" + commandData);
+                    
                     if(isChatting()) // if is in chat and want to connect with other
                     {
                         // move other user to its own thread
@@ -158,7 +160,7 @@ public class UserThread extends Thread
                     break;
                     
                 default:
-                    // define some default case if not an actual command
+                    user.getmyData_OUT().write(formatOutput("invalid command"));
                     break;
             }
                     
@@ -187,9 +189,9 @@ public class UserThread extends Thread
         
         newUserThread.start();
         
-        currentUser.getmyData_OUT().write(formatOutput("SERVER: You've switched chats"));
+        currentUser.getmyData_OUT().write(formatOutput("SERVER: CHAT SWITCHED"));
         userToMove.getmyData_OUT().write(formatOutput(
-                "SERVER: You've been disconnected from that chat by request of the other user."));
+                "SERVER: CHAT DISCONNECTED"));
         
         USER1 = currentUser;
         USER2 = null;
@@ -220,6 +222,7 @@ public class UserThread extends Thread
                 userToConnectThread.stop();
                 
                 userList.replace(USER2, this);
+                user.getmyData_OUT().write(formatOutput("SWITCHED chats"));
             }
             else
                 user.getmyData_OUT().write(
